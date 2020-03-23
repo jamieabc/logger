@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/bitmark-inc/logger/level"
 	"os"
 	"path"
 	"strings"
@@ -71,29 +72,6 @@ const (
 
 // Holds a set of default values for future NewChannel calls
 var levelMap = map[string]string{DefaultTag: DefaultLevel}
-
-// simple ordering to allow <= to decide if log will be output
-const (
-	_ = iota
-	traceValue
-	debugValue
-	infoValue
-	warnValue
-	errorValue
-	criticalValue
-	offValue
-)
-
-// This needs to correspond to seelog levels
-var validLevels = map[string]int{
-	"trace":    traceValue,
-	"debug":    debugValue,
-	"info":     infoValue,
-	"warn":     warnValue,
-	"error":    errorValue,
-	"critical": criticalValue,
-	"off":      offValue,
-}
 
 // The logging channel structure
 // example of use
@@ -185,11 +163,11 @@ func Initialise(configuration Configuration) error {
 		return errors.New("unable to write to logging files")
 	}
 
-	for tag, level := range configuration.Levels {
+	for tag, l := range configuration.Levels {
 		// make sure that levelMap only contains correct data
 		// by ignoring invalid levels
-		if _, ok := validLevels[level]; ok {
-			levelMap[tag] = level
+		if _, ok := level.ValidLevels[l]; ok {
+			levelMap[tag] = l
 		}
 	}
 
@@ -226,7 +204,7 @@ func Initialise(configuration Configuration) error {
 		// ensure that the global critical/panic functions always write to the log file
 		globalData.globalLog = New("PANIC")
 		globalData.globalLog.level = "critical"
-		globalData.globalLog.levelNumber = criticalValue
+		globalData.globalLog.levelNumber = level.CriticalValue
 	}
 	return err
 }
@@ -256,29 +234,29 @@ func New(tag string) *L {
 	j := strings.Join(s, "%%")
 
 	// determine the level
-	level, ok := levelMap[tag]
+	l, ok := levelMap[tag]
 	if !ok {
-		level, ok = levelMap[DefaultTag]
+		l, ok = levelMap[DefaultTag]
 	}
 	if !ok {
-		level = DefaultLevel
+		l = DefaultLevel
 	}
 
 	// create a logger channel
-	l := &L{
+	ptr := &L{
 		tag:          tag, // for referencing default level
 		formatPrefix: j + tagSuffix,
 		textPrefix:   tag + tagSuffix,
-		level:        level,
-		levelNumber:  validLevels[level], // level is validated so get a non-zero value
+		level:        l,
+		levelNumber:  level.ValidLevels[l], // level is validated so get a non-zero value
 		log:          seelog.Current,
 	}
 
 	globalData.Lock()
-	globalData.data = append(globalData.data, l)
+	globalData.data = append(globalData.data, ptr)
 	defer globalData.Unlock()
 
-	return l
+	return ptr
 }
 
 // flush messages
@@ -343,17 +321,17 @@ func ListLevels() ([]byte, error) {
 }
 
 // UpdateTagLogLevel - update log level for specific tag
-func UpdateTagLogLevel(tag, level string) error {
+func UpdateTagLogLevel(tag, newLevel string) error {
 	globalData.Lock()
 	defer globalData.Unlock()
 
 	for i, l := range globalData.data {
 		if l.tag == tag {
-			if num, ok := validLevels[level]; !ok {
-				return fmt.Errorf("level %s invalid", level)
+			if num, ok := level.ValidLevels[newLevel]; !ok {
+				return fmt.Errorf("level %s invalid", newLevel)
 			} else {
 				globalData.data[i].levelNumber = num
-				globalData.data[i].level = level
+				globalData.data[i].level = newLevel
 				return nil
 			}
 		}
