@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/bitmark-inc/logger/level"
+	"github.com/bitmark-inc/logger/writer"
 	"os"
 	"path"
 	"strings"
@@ -98,27 +99,27 @@ type LogLevels struct {
 // Level - log level info
 type Level struct {
 	Tag      string `json:"tag"`
-	LogLevel string `json:"category"`
+	LogLevel string `json:"log_level"`
 }
 
-// loggers - holds all logger info
-type loggers struct {
+// data - holds all logger info
+type data struct {
 	sync.Mutex
-	globalLog   *L
+	globalLog   writer.Writer
 	initialised bool
-	data        []*L
+	loggers     []writer.Writer
 }
 
-var globalData loggers
+var globalData data
 
-// Set up the logging system
+// Use seelog to set up logging system
 func Initialise(configuration Configuration) error {
 	if globalData.initialised {
 		return errors.New("logger is already initialised")
 	}
 
 	if "" == configuration.Directory {
-		return errors.New("Directory cannot be empty")
+		return errors.New("directory cannot be empty")
 	}
 
 	if "" == configuration.File {
@@ -164,7 +165,7 @@ func Initialise(configuration Configuration) error {
 	}
 
 	for tag, l := range configuration.Levels {
-		// make sure that levelMap only contains correct data
+		// make sure that levelMap only contains correct loggers
 		// by ignoring invalid levels
 		if _, ok := level.ValidLevels[l]; ok {
 			levelMap[tag] = l
@@ -202,9 +203,11 @@ func Initialise(configuration Configuration) error {
 		globalData.initialised = true
 
 		// ensure that the global critical/panic functions always write to the log file
-		globalData.globalLog = New("PANIC")
-		globalData.globalLog.level = "critical"
-		globalData.globalLog.levelNumber = level.CriticalValue
+		tag := "PANIC"
+		globalData.globalLog, err = writer.New(writer.Seelog, tag, tag, tag+tagSuffix, level.Critical)
+		if nil != err {
+			return err
+		}
 	}
 	return err
 }
@@ -214,7 +217,7 @@ func Finalise() {
 	seelog.Current.Warn("LOGGER: ===== Logging system stopped =====")
 	seelog.Flush()
 	globalData.initialised = false
-	globalData.data = globalData.data[:0]
+	globalData.loggers = globalData.loggers[:0]
 }
 
 // flush all channels
@@ -223,8 +226,7 @@ func Flush() {
 }
 
 // Open a new logging channel with a specified tag
-func New(tag string) *L {
-
+func New(tag string) writer.Writer {
 	if !globalData.initialised {
 		panic("logger.New Initialise was not called")
 	}
@@ -242,18 +244,10 @@ func New(tag string) *L {
 		l = DefaultLevel
 	}
 
-	// create a logger channel
-	ptr := &L{
-		tag:          tag, // for referencing default level
-		formatPrefix: j + tagSuffix,
-		textPrefix:   tag + tagSuffix,
-		level:        l,
-		levelNumber:  level.ValidLevels[l], // level is validated so get a non-zero value
-		log:          seelog.Current,
-	}
+	ptr, _ := writer.New(writer.Seelog, tag, j+tagSuffix, tag+tagSuffix, l)
 
 	globalData.Lock()
-	globalData.data = append(globalData.data, ptr)
+	globalData.loggers = append(globalData.loggers, ptr)
 	defer globalData.Unlock()
 
 	return ptr
@@ -304,10 +298,10 @@ func PanicIfError(message string, err error) {
 func ListLevels() ([]byte, error) {
 	levels := make([]Level, 0)
 
-	for _, l := range globalData.data {
+	for _, l := range globalData.loggers {
 		levels = append(levels, Level{
-			Tag:      l.tag,
-			LogLevel: l.level,
+			Tag:      l.Tag(),
+			LogLevel: l.Level(),
 		})
 	}
 
@@ -325,15 +319,9 @@ func UpdateTagLogLevel(tag, newLevel string) error {
 	globalData.Lock()
 	defer globalData.Unlock()
 
-	for i, l := range globalData.data {
-		if l.tag == tag {
-			if num, ok := level.ValidLevels[newLevel]; !ok {
-				return fmt.Errorf("level %s invalid", newLevel)
-			} else {
-				globalData.data[i].levelNumber = num
-				globalData.data[i].level = newLevel
-				return nil
-			}
+	for _, l := range globalData.loggers {
+		if l.Tag() == tag {
+			return l.UpdateLevel(newLevel)
 		}
 	}
 

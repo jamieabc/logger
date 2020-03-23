@@ -18,22 +18,22 @@ const (
 )
 
 const (
-	TraceKey    = "trace"
-	DebugKey    = "debug"
-	InfoKey     = "info"
-	WarnKey     = "warn"
-	ErrorKey    = "error"
-	CriticalKey = "critical"
-	OffKey      = "off"
+	Trace    = "trace"
+	Debug    = "debug"
+	Info     = "info"
+	Warn     = "warn"
+	Error    = "error"
+	Critical = "critical"
+	Off      = "off"
 )
 
 // This needs to correspond to seelog levels
 var ValidLevels = map[string]int{
-	TraceKey:    TraceValue,
-	DebugKey:    DebugValue,
-	InfoKey:     InfoValue,
-	WarnKey:     WarnValue,
-	ErrorKey:    ErrorValue,
-	CriticalKey: CriticalValue,
-	OffKey:      OffValue,
+	Trace:    TraceValue,
+	Debug:    DebugValue,
+	Info:     InfoValue,
+	Warn:     WarnValue,
+	Error:    ErrorValue,
+	Critical: CriticalValue,
+	Off:      OffValue,
 }

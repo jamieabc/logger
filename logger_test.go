@@ -142,7 +142,7 @@ func checkfile(t *testing.T, s string) {
 	defer f.Close()
 	r := bufio.NewReader(f)
 
-	// length of the data and time prefix to skip
+	// length of the loggers and time prefix to skip
 	dateTimeLength := 19
 
 	for _, line := range strings.Split(s, "\n") {

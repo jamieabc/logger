@@ -12,11 +12,11 @@ import (
 )
 
 func TestValidLevels(t *testing.T) {
-	assert.Equal(t, level.TraceValue, level.ValidLevels[level.TraceKey], "wrong trace")
-	assert.Equal(t, level.DebugValue, level.ValidLevels[level.DebugKey], "wrong trace")
-	assert.Equal(t, level.InfoValue, level.ValidLevels[level.InfoKey], "wrong trace")
-	assert.Equal(t, level.WarnValue, level.ValidLevels[level.WarnKey], "wrong trace")
-	assert.Equal(t, level.ErrorValue, level.ValidLevels[level.ErrorKey], "wrong trace")
-	assert.Equal(t, level.CriticalValue, level.ValidLevels[level.CriticalKey], "wrong trace")
-	assert.Equal(t, level.OffValue, level.ValidLevels[level.OffKey], "wrong trace")
+	assert.Equal(t, level.TraceValue, level.ValidLevels[level.Trace], "wrong trace")
+	assert.Equal(t, level.DebugValue, level.ValidLevels[level.Debug], "wrong trace")
+	assert.Equal(t, level.InfoValue, level.ValidLevels[level.Info], "wrong trace")
+	assert.Equal(t, level.WarnValue, level.ValidLevels[level.Warn], "wrong trace")
+	assert.Equal(t, level.ErrorValue, level.ValidLevels[level.Error], "wrong trace")
+	assert.Equal(t, level.CriticalValue, level.ValidLevels[level.Critical], "wrong trace")
+	assert.Equal(t, level.OffValue, level.ValidLevels[level.Off], "wrong trace")
 }
